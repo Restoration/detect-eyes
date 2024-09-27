@@ -1,12 +1,19 @@
 import * as facemesh from "@tensorflow-models/facemesh";
 
-// 目の中心を計算
-export const calculateEyeCenter = (
-  eye: number[][]
-): { x: number; y: number } => {
-  const x = eye.reduce((sum, point) => sum + point[0], 0) / eye.length;
-  const y = eye.reduce((sum, point) => sum + point[1], 0) / eye.length;
-  return { x, y };
+// ランドマークの位置を基に目の中心を計算するヘルパー関数
+const calculateEyeCenter = (keypoints: number[][], eyeIndices: number[]) => {
+  let xSum = 0;
+  let ySum = 0;
+
+  eyeIndices.forEach((index) => {
+    xSum += keypoints[index][0];
+    ySum += keypoints[index][1];
+  });
+
+  const centerX = xSum / eyeIndices.length;
+  const centerY = ySum / eyeIndices.length;
+
+  return { x: centerX, y: centerY };
 };
 
 // 目線の方向がカメラの中心に向いているかどうかの判定
@@ -37,21 +44,6 @@ function isLookingAtCamera(
   );
 }
 
-// 目線の方向がカメラの中心に向いているかどうかの判定
-// export const isLookingInSpecificDirection = (
-//   leftEyeCenter: { x: number; y: number },
-//   rightEyeCenter: { x: number; y: number }
-// ): boolean => {
-//   const thresholdX = 100; // 画面中央からのX座標の閾値
-//   const thresholdY = 50; // 画面中央からのY座標の閾値
-
-//   // 目の中心がどの程度中央から離れているかを確認
-//   return (
-//     Math.abs(leftEyeCenter.x - rightEyeCenter.x) > thresholdX ||
-//     Math.abs(leftEyeCenter.y - rightEyeCenter.y) > thresholdY
-//   );
-// };
-
 // 目線検出処理
 export const detectEyes = async (
   video: HTMLVideoElement,
@@ -67,60 +59,33 @@ export const detectEyes = async (
       const keypoints = predictions[0].scaledMesh as number[][]; // 3次元座標が格納された配列
 
       console.log(keypoints);
+      // 左目と右目に該当するランドマークのインデックス
+      const leftEyeIndices = [33, 133, 160, 159, 158, 144, 145, 153]; // 左目周りのインデックス
+      const rightEyeIndices = [362, 263, 387, 386, 385, 373, 374, 380]; // 右目周りのインデックス
 
-      // 左右の目の座標を取得（例: 目の位置は468〜473の間）
-      // console.log(keypoints)
-      // const leftEye = keypoints.slice(468, 473);
-      // const rightEye = keypoints.slice(473, 478);
-      // const leftEye = leftEyeIndices.map(index => keypoints[index]);
-      // const rightEye = rightEyeIndices.map(index => keypoints[index]);
+      // 左目の中心位置を計算
+      const leftEyeCenter = calculateEyeCenter(keypoints, leftEyeIndices);
+      console.log("Left Eye Center: ", leftEyeCenter);
 
-      // 左右の目に対応するランドマークインデックス
-      const leftEyeIndices = [468, 469, 470, 471, 472];
-      const rightEyeIndices = [473, 474, 475, 476, 477];
+      // 右目の中心位置を計算
+      const rightEyeCenter = calculateEyeCenter(keypoints, rightEyeIndices);
+      console.log("Right Eye Center: ", rightEyeCenter);
 
-      const leftEye = leftEyeIndices.map((index) => {
-        if (keypoints[index]) {
-          return keypoints[index];
-        } else {
-          console.error(
-            `インデックス ${index} に対応するランドマークが見つかりません`
-          );
-          return [0, 0, 0]; // デフォルト値を設定
-        }
-      });
+      // 両目の平均を取って目の中心位置を出す場合
+      const eyesCenter = {
+        x: (leftEyeCenter.x + rightEyeCenter.x) / 2,
+        y: (leftEyeCenter.y + rightEyeCenter.y) / 2,
+      };
+      console.log("Eyes Center: ", eyesCenter);
 
-      const rightEye = rightEyeIndices.map((index) => {
-        if (keypoints[index]) {
-          return keypoints[index];
-        } else {
-          console.error(
-            `インデックス ${index} に対応するランドマークが見つかりません`
-          );
-          return [0, 0, 0]; // デフォルト値を設定
-        }
-      });
-
-      // 目の中心位置を計算
-      const leftEyeCenter = calculateEyeCenter(leftEye);
-      const rightEyeCenter = calculateEyeCenter(rightEye);
-
-      console.log(leftEyeCenter);
-      console.log(rightEyeCenter);
       if (isLookingAtCamera(leftEyeCenter, rightEyeCenter, video)) {
         console.log("目線がカメラと合いました！");
         // イベントを発火
         alert("目線がカメラと合いました！");
       }
-
-      // 条件に基づいてプログラムを発火
-      //   if (isLookingInSpecificDirection(leftEyeCenter, rightEyeCenter)) {
-      //     console.log("目線がカメラと合いました！");
-      //     // プログラムを発火
-      //   }
     }
     // フレームごとに繰り返し検出を行う
-    // requestAnimationFrame(detect);
+    requestAnimationFrame(detect);
   };
 
   await detect();
