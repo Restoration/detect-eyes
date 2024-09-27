@@ -1,4 +1,3 @@
-import * as tf from "@tensorflow/tfjs";
 import * as facemesh from "@tensorflow-models/facemesh";
 
 // 目の中心を計算
@@ -54,8 +53,9 @@ function isLookingAtCamera(
 // };
 
 // 目線検出処理
-export const detectEyes = async (video: HTMLVideoElement) => {
-  const model = await facemesh.load();
+export const detectEyes = async (video: HTMLVideoElement, model: any) => {
+  // const model = await facemesh.load();
+  if(!video) return;
 
   // 再起的に処理を実行
   const detect = async () => {
@@ -64,6 +64,7 @@ export const detectEyes = async (video: HTMLVideoElement) => {
     if (predictions.length > 0) {
       // 目の位置を取得
       // FIXME
+      console.log(predictions)
       const keypoints = predictions[0].scaledMesh as any;
 
       console.log(keypoints);
@@ -79,6 +80,7 @@ export const detectEyes = async (video: HTMLVideoElement) => {
       if (isLookingAtCamera(leftEyeCenter, rightEyeCenter, video)) {
         console.log("目線がカメラと合いました！");
         // イベントを発火
+        alert("目線がカメラと合いました！");
       }
 
       // 条件に基づいてプログラムを発火
@@ -87,28 +89,9 @@ export const detectEyes = async (video: HTMLVideoElement) => {
       //     // プログラムを発火
       //   }
     }
-    // フレームごとに繰り返し検出
-    requestAnimationFrame(detect);
+    // フレームごとに繰り返し検出を行う
+    // requestAnimationFrame(detect);
   };
 
   await detect();
-};
-
-// イベント発火関数
-export const startEyeTracking = async () => {
-  const video = document.createElement("video");
-  // 動作確認用
-  // ビデオを要素に入れる
-  // document.body.appendChild(video);
-
-  try {
-    // ブラウザのカメラ起動
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-    video.play();
-    // 目線検出を開始
-    await detectEyes(video);
-  } catch (err) {
-    console.error("カメラへのアクセスに失敗しました", err);
-  }
 };
