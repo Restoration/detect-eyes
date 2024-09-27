@@ -14,16 +14,16 @@ export default function Home() {
         video: true,
         audio: false,
       });
-      if (videoRef.current) {
+      if (videoRef && videoRef.current) {
         videoRef.current.srcObject = stream;
 
         // 'loadeddata'イベントが発火した後に処理を実行
         videoRef.current.addEventListener("loadeddata", async () => {
-          videoRef.current!.play();
           tf.setBackend("webgl");
           const model = await facemesh.load();
+          if (!videoRef.current) return;
           // 目線検出を開始
-          await detectEyes(videoRef.current!, model);
+          await detectEyes(videoRef.current, model);
         });
       }
     } catch (err) {
@@ -38,7 +38,14 @@ export default function Home() {
   }, []);
   return (
     <div>
-      <video ref={videoRef} autoPlay playsInline />
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        // video要素は残したまま非表示にしている
+        // 内部でvideo要素のサイズを利用しているためvisibilityで非表示
+        style={{ visibility: "hidden" }}
+      />
     </div>
   );
 }
