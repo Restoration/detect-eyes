@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
 import * as facemesh from "@tensorflow-models/facemesh";
-import { Coords3D } from "@tensorflow-models/facemesh/dist/util";
 
+// 目の中心を計算
 export const calculateEyeCenter = (
   eye: number[][]
 ): { x: number; y: number } => {
@@ -10,19 +10,48 @@ export const calculateEyeCenter = (
   return { x, y };
 };
 
-export const isLookingInSpecificDirection = (
+// 目線の方向がカメラの中心に向いているかどうかの判定
+function isLookingAtCamera(
   leftEyeCenter: { x: number; y: number },
-  rightEyeCenter: { x: number; y: number }
-): boolean => {
-  const thresholdX = 100; // 画面中央からのX座標の閾値
-  const thresholdY = 50; // 画面中央からのY座標の閾値
+  rightEyeCenter: { x: number; y: number },
+  video: HTMLVideoElement
+): boolean {
+  const videoWidth = video.videoWidth;
+  const videoHeight = video.videoHeight;
 
-  // 目の中心がどの程度中央から離れているかを確認
+  // カメラ（画面）中央の座標
+  const centerX = videoWidth / 2;
+  const centerY = videoHeight / 2;
+
+  // 目の中心位置がカメラ中央付近かどうかを判定
+  const threshold = 50; // カメラの中心からどのくらいの範囲で目が合っているとみなすかの閾値
+  const leftEyeDistanceX = Math.abs(leftEyeCenter.x - centerX);
+  const leftEyeDistanceY = Math.abs(leftEyeCenter.y - centerY);
+  const rightEyeDistanceX = Math.abs(rightEyeCenter.x - centerX);
+  const rightEyeDistanceY = Math.abs(rightEyeCenter.y - centerY);
+
   return (
-    Math.abs(leftEyeCenter.x - rightEyeCenter.x) > thresholdX ||
-    Math.abs(leftEyeCenter.y - rightEyeCenter.y) > thresholdY
+    leftEyeDistanceX < threshold &&
+    leftEyeDistanceY < threshold &&
+    rightEyeDistanceX < threshold &&
+    rightEyeDistanceY < threshold
   );
-};
+}
+
+// 目線の方向がカメラの中心に向いているかどうかの判定
+// export const isLookingInSpecificDirection = (
+//   leftEyeCenter: { x: number; y: number },
+//   rightEyeCenter: { x: number; y: number }
+// ): boolean => {
+//   const thresholdX = 100; // 画面中央からのX座標の閾値
+//   const thresholdY = 50; // 画面中央からのY座標の閾値
+
+//   // 目の中心がどの程度中央から離れているかを確認
+//   return (
+//     Math.abs(leftEyeCenter.x - rightEyeCenter.x) > thresholdX ||
+//     Math.abs(leftEyeCenter.y - rightEyeCenter.y) > thresholdY
+//   );
+// };
 
 // 目線検出処理
 export const detectEyes = async (video: HTMLVideoElement) => {
@@ -30,10 +59,12 @@ export const detectEyes = async (video: HTMLVideoElement) => {
 
   // 再起的に処理を実行
   const detect = async () => {
-    const predictions: facemesh.AnnotatedPrediction[] = await model.estimateFaces(video);
+    const predictions: facemesh.AnnotatedPrediction[] =
+      await model.estimateFaces(video);
     if (predictions.length > 0) {
       // 目の位置を取得
-      const keypoints = predictions[0].scaledMesh;
+      // FIXME
+      const keypoints = predictions[0].scaledMesh as any;
 
       console.log(keypoints);
 
@@ -45,22 +76,30 @@ export const detectEyes = async (video: HTMLVideoElement) => {
       const leftEyeCenter = calculateEyeCenter(leftEye);
       const rightEyeCenter = calculateEyeCenter(rightEye);
 
-      // 条件に基づいてプログラムを発火
-      if (isLookingInSpecificDirection(leftEyeCenter, rightEyeCenter)) {
-        console.log("特定の方向を見ている");
-        // プログラムを発火
+      if (isLookingAtCamera(leftEyeCenter, rightEyeCenter, video)) {
+        console.log("目線がカメラと合いました！");
+        // イベントを発火
       }
+
+      // 条件に基づいてプログラムを発火
+      //   if (isLookingInSpecificDirection(leftEyeCenter, rightEyeCenter)) {
+      //     console.log("目線がカメラと合いました！");
+      //     // プログラムを発火
+      //   }
     }
+    // フレームごとに繰り返し検出
     requestAnimationFrame(detect);
   };
 
-  detect();
+  await detect();
 };
 
 // イベント発火関数
 export const startEyeTracking = async () => {
   const video = document.createElement("video");
-  document.body.appendChild(video);
+  // 動作確認用
+  // ビデオを要素に入れる
+  // document.body.appendChild(video);
 
   try {
     // ブラウザのカメラ起動
