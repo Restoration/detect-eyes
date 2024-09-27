@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react";
 import { detectEyes } from "./libs/detectEyeUtiles";
 import * as tf from '@tensorflow/tfjs';
-import FaceMeshTracker from "./components/FaceMeshTracker";
 import * as facemesh from "@tensorflow-models/facemesh";
 
 export const loadModel = async () => {
@@ -22,10 +21,10 @@ const startEyeTracking = async () => {
 
       // 'loadeddata'イベントが発火した後に処理を実行
       videoRef.current.addEventListener('loadeddata', async () => {
-        videoRef.current.play();
+        videoRef.current!.play();
         const model  = await loadModel();
         // 目線検出を開始
-        await detectEyes(videoRef.current, model);
+        await detectEyes(videoRef.current!, model);
       });
     }
   } catch (err) {
