@@ -5,6 +5,11 @@ $ npm run dev
 ```
 
 
+### Facemeshのランドマークマッピング
+---
+Facemeshでは顔の468個のランドマークが使用されており、これらのランドマークは、顔の特定の部位（目、鼻、口、輪郭など）に対応しています。
+
+- https://github.com/google-ai-edge/mediapipe/issues/1909
 
 
 ### 注意点
