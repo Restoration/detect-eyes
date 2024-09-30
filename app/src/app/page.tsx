@@ -7,35 +7,34 @@ import * as facemesh from "@tensorflow-models/facemesh";
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // イベント発火関数
-  const startEyeTracking = async () => {
-    try {
-      const stream = await window.navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false,
-      });
-      if (videoRef && videoRef.current) {
-        videoRef.current.srcObject = stream;
-
-        // 'loadeddata'イベントが発火した後に処理を実行
-        videoRef.current.addEventListener("loadeddata", async () => {
-          tf.setBackend("webgl");
-          const model = await facemesh.load();
-          if (!videoRef.current) return;
-          // 目線検出を開始
-          await detectEyes(videoRef.current, model);
-        });
-      }
-    } catch (err) {
-      console.error("カメラへのアクセスに失敗しました", err);
-    }
-  };
-
   useEffect(() => {
+    const detectEvent = async () => {
+      if (!videoRef.current) return;
+      tf.setBackend("webgl");
+      const model = await facemesh.load();
+      // 目線検出を開始
+      await detectEyes(videoRef.current, model);
+    };
     (async () => {
-      await startEyeTracking();
+      try {
+        const stream = await window.navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+        if (videoRef && videoRef.current) {
+          videoRef.current.srcObject = stream;
+
+          // 'loadeddata'イベントが発火した後に処理を実行
+          videoRef.current.addEventListener("loadeddata", detectEvent);
+        }
+      } catch (err) {
+        console.error("カメラへのアクセスに失敗しました", err);
+      }
     })();
-  }, []);
+    return () => {
+      videoRef.current?.removeEventListener("loadeddata", detectEvent);
+    };
+  }, [videoRef.current]);
   return (
     <div>
       <video
